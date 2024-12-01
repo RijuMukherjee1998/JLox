@@ -93,7 +93,7 @@ public class Scanner
                 addToken(match('=') ? TokenType.BANG_EQUAL : TokenType.BANG);
                 break;
             case '=':
-                addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.BANG);
+                addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);
                 break;
             case '<':
                 addToken(match('=') ? TokenType.LESS_EQUAL : TokenType.LESS);
@@ -105,6 +105,15 @@ public class Scanner
                 if(match('/'))
                 {
                     while(peek() != '\n' && !isAtEnd())
+                        advance();
+                }
+                else if(match('*'))
+                {
+                    while(peek() != '*' && !isAtEnd())
+                        advance();
+                    if(!isAtEnd() && peekNext() == '/')
+                        advance();
+                    if(!isAtEnd())
                         advance();
                 }
                 else
