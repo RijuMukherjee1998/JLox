@@ -6,6 +6,19 @@ import java.util.List;
     We are making a top-down parser
     It takes in a list of tokens and parses out these tokens
 */
+
+/*
+    Parser expression grammar for jlox
+     expression →  equality ;
+     equality   → comparison ( ( "!=" | "==" ) comparison )* ;
+     comparison → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+     term       → factor ( ( "-" | "+" ) factor )* ;
+     factor     → unary ( ( "/" | "*" ) unary )* ;
+     unary      → ( "!" | "-" ) unary | primary ;
+     primary    → NUMBER | STRING | "true" | "false" | "nil"
+                   |"(" expression ")" ;
+*/
+
 public class Parser {
     private static class ParseError extends RuntimeException { }
     private final List<Token> tokens;
