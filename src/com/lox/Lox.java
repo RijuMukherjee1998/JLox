@@ -6,6 +6,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 
 
 public class Lox
@@ -42,6 +43,8 @@ public class Lox
         {
             System.out.print("jlox > ");
             String line = reader.readLine();
+            if(Objects.equals(line, "quit"))
+                System.exit(0);
             if(line ==  null || line.trim().isEmpty())
                 continue;
             run(line);
@@ -54,11 +57,11 @@ public class Lox
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
         Parser parser = new Parser(tokens);
-        Expr expression = parser.parse();
+        List<Stmt> statements = parser.parse();
 
         if(hadError) return;
-        System.out.println(new AstPrinter().print(expression));
-        interpreter.interpret(expression);
+        //System.out.println(new AstPrinter().print(expression));
+        interpreter.interpret(statements);
 
     }
 

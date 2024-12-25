@@ -1,0 +1,63 @@
+var myVar = 20;
+print myVar;
+myVar = 30;
+{
+    var myVar = 31;
+    print myVar;
+    myVar = 34;
+    print myVar;
+}
+print myVar;
+
+
+/*
+    My test lox code to test out the jlox interpreter
+*/
+
+
+var a = "global a";
+var b = "global b";
+var c = "global c";
+print c;
+
+c = "cc";
+c = "new global c";
+print c;
+{
+    var a = "outer a";
+    var b = "outer b";
+    var c = "outer c";
+    a = "2222";
+    print a;
+    {
+        var a = "inner a";
+        var b = "inner b";
+        var c = "inner c";
+
+        print a;
+        print b;
+        print c;
+    }
+    print a;
+    print b;
+    print c;
+}
+print a;
+print b;
+print c;
+
+var aa;
+var bb;
+
+a = "assigned";
+print aa;
+print bb;
+
+{
+    var a = a + 2;
+    print a;
+}
+print a;
+
+a = a + 35;
+print a;

@@ -1,4 +1,5 @@
 package com.lox;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -9,14 +10,25 @@ import java.util.List;
 
 /*
     Parser expression grammar for jlox
-     expression →  equality ;
+    //statement syntax tree
+     program    → declaration* EOF ;
+     declaration → varDecl | reassignmentDecl | statement;
+     varDecl    → "var" IDENTIFIER ( "=" expression) ? ";" ;
+     statement  → exprStmt | printStmt | block;
+     block      → "{" declaration* "}";
+     exprStmt   → expression ";" ;
+     printStmt  → "print" expression ";" ;\
+
+    //expression syntax tree
+     expression →  assignment ;
+     assignment → IDENTIFIER "=" assignment | equality ;
      equality   → comparison ( ( "!=" | "==" ) comparison )* ;
      comparison → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
      term       → factor ( ( "-" | "+" ) factor )* ;
      factor     → unary ( ( "/" | "*" ) unary )* ;
      unary      → ( "!" | "-" ) unary | primary ;
      primary    → NUMBER | STRING | "true" | "false" | "nil"
-                   |"(" expression ")" ;
+                   |"(" expression ")" | IDENTIFIER ;
 */
 
 public class Parser {
@@ -29,18 +41,93 @@ public class Parser {
     }
 
     // initial method to call to parse the entire code
-    Expr parse() {
-        try {
-            return expression();
+    List<Stmt> parse(){
+        List<Stmt> statements = new ArrayList<>();
+        while(!isAtEnd()){
+            statements.add(declarations());
         }
-        catch (ParseError e) {
+        return statements;
+    }
+
+    private Stmt declarations() {
+        try{
+            if(match(TokenType.VAR)) return varDeclaration();
+            if(match(TokenType.IDENTIFIER)) return reassignmentDeclaration();
+            return statement();
+        } catch (ParseError perr){
+            synchronize();
             return null;
         }
     }
+
+    private Stmt varDeclaration() {
+        Token name = consume(TokenType.IDENTIFIER, "Expect variable name.");
+        Expr initializer = null;
+        if(match(TokenType.EQUAL)) {
+            initializer = expression();
+        }
+        consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
+        return new Stmt.Var(name, initializer);
+    }
+
+    private Stmt statement() {
+        if(match(TokenType.PRINT)) return printStatement();
+        if(match(TokenType.LEFT_BRACE)) return new Stmt.Block(block());
+        return expressionStatement();
+    }
+
+    private Stmt reassignmentDeclaration() {
+        Expr reIntializer = null;
+        Token var_name = previous();
+        if(match(TokenType.EQUAL)) {
+            reIntializer = expression();
+        }
+        consume(TokenType.SEMICOLON, "Expect ';' after reassignment.");
+        return new Stmt.Reassign(var_name, reIntializer);
+    }
+
+    private List<Stmt> block() {
+        List<Stmt> statements = new ArrayList<>();
+        while(!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(declarations());
+        }
+        consume(TokenType.RIGHT_BRACE, "Expect '}' after block.");
+        return statements;
+    }
+
+    private Stmt printStatement() {
+        Expr value = expression();
+        consume(TokenType.SEMICOLON, "Expect ';' after value.");
+        return new Stmt.Print(value);
+    }
+
+    private Stmt expressionStatement() {
+        Expr value = expression();
+        consume(TokenType.SEMICOLON, "Expect ';' after value.");
+        return new Stmt.Expression(value);
+    }
+
     // expression -> equality
     private Expr expression()
     {
-        return equality();
+        return assignment();
+    }
+
+    private Expr assignment()
+    {
+        Expr expr = equality();
+
+        if(match(TokenType.EQUAL)) {
+            Token equals = previous();
+            Expr value = assignment();
+
+            if (expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable) expr).name;
+                return new Expr.Assign(name, expr);
+            }
+            error(equals, "Invalid assignment target.");
+        }
+        return expr;
     }
 
     // equality -> comparison (("!=" | "==") comparison)*
@@ -110,6 +197,9 @@ public class Parser {
 
         if(match(TokenType.NUMBER , TokenType.STRING)) return new Expr.Literal(previous().literal);
 
+        if (match(TokenType.IDENTIFIER)){
+            return new Expr.Variable(previous());
+        }
         if(match(TokenType.LEFT_PAREN)) {
             Expr expr = expression();
             consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.");
@@ -168,6 +258,7 @@ public class Parser {
         if(!isAtEnd()) current++;
         return previous();
     }
+
     private boolean isAtEnd()
     {
         return peek().type == TokenType.EOF;

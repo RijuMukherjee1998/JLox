@@ -103,8 +103,9 @@ public class Scanner
             case '/':
                 if(match('/'))
                 {
-                    while(peek() != '\n' && !isAtEnd())
+                    while(peek() != '\n' && !isAtEnd()) {
                         advance();
+                    }
                 }
                 else if(match('*'))
                 {
