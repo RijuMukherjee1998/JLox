@@ -1,0 +1,25 @@
+/*
+    Testing While Loops
+*/
+
+var myCount = 10;
+
+while(myCount > 0)
+{
+    print myCount;
+    myCount = myCount - 1;
+}
+print "launch";
+
+/*
+    Testing for loops (currently you have to add the ; after the increment statement also will try to drop it off later)
+*/
+for(var i = 0; i < 100; i = i+1;) {
+    print i;
+    i = i * 2;
+    print " Testing Multiple statements";
+}
+
+for(;;){
+    print "Testing Infinite Loops";
+}

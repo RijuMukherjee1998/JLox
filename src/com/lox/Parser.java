@@ -1,5 +1,7 @@
 package com.lox;
+import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -11,15 +13,18 @@ import java.util.List;
 /*
     Parser expression grammar for jlox
     //statement syntax tree
-     program    → declaration* EOF ;
-     declaration → varDecl | reassignmentDecl | statement;
-     varDecl    → "var" IDENTIFIER ( "=" expression) ? ";" ;
-     statement  → exprStmt | printStmt | blockStmt | ifStmt;
-     ifStmt     → "if" "(" expression ")" statement
-                    ( "else" statement)? ;
-     blockStmt  → "{" declaration* "}";
-     exprStmt   → expression ";" ;
-     printStmt  → "print" expression ";" ;\
+     program     → declaration* EOF ;
+     declaration → varDecl | varReassign | statement;
+     varDecl     → "var" IDENTIFIER ( "=" expression) ? ";" ;
+     varReassign → IDENTIFIER ( "=" expression);
+     statement   → exprStmt | ifStmt | whileStmt | forStmt |  printStmt | blockStmt ;
+     ifStmt      → "if" "(" expression ")" statements
+                    ( "else" statements)? ;
+     whileStmt   → "while" "(" expression ")" statement;
+     forStmt     → "for" "(" (varDecl | exprStmt | ;) expression? ";" expression?")" statements;
+     blockStmt   → "{" declaration* "}";
+     exprStmt    → expression ";" ;
+     printStmt   → "print" expression ";" ;\
 
     //expression syntax tree
      expression →  assignment ;
@@ -58,7 +63,7 @@ public class Parser {
             if(match(TokenType.VAR)) return varDeclaration();
             if(match(TokenType.IDENTIFIER)) return reassignmentDeclaration();
             return statement();
-        } catch (ParseError perr){
+        } catch (ParseError err){
             synchronize();
             return null;
         }
@@ -74,8 +79,20 @@ public class Parser {
         return new Stmt.Var(name, initializer);
     }
 
+    private Stmt reassignmentDeclaration() {
+        Expr reInitializer = null;
+        Token var_name = previous();
+        if(match(TokenType.EQUAL)) {
+            reInitializer = expression();
+        }
+        consume(TokenType.SEMICOLON, "Expect ';' after reassignment.");
+        return new Stmt.Reassign(var_name, reInitializer);
+    }
+
     private Stmt statement() {
         if(match(TokenType.IF)) return ifStatement();
+        if(match(TokenType.FOR)) return forStatement();
+        if(match(TokenType.WHILE)) return whileStatement();
         if(match(TokenType.PRINT)) return printStatement();
         if(match(TokenType.LEFT_BRACE)) return new Stmt.Block(block());
         return expressionStatement();
@@ -94,15 +111,45 @@ public class Parser {
         }
         return new Stmt.If(condition, thenBranchStmts, elseBranchStmts);
     }
-
-    private Stmt reassignmentDeclaration() {
-        Expr reIntializer = null;
-        Token var_name = previous();
-        if(match(TokenType.EQUAL)) {
-            reIntializer = expression();
+    private Stmt forStatement() {
+        consume(TokenType.LEFT_PAREN, "Expect '(' after 'for' statement.");
+        Stmt initializer;
+        if(match(TokenType.SEMICOLON)) {
+            initializer = null;
+        } else if (match(TokenType.VAR)) {
+            initializer = varDeclaration();
+        } else{
+            initializer = expressionStatement();
         }
-        consume(TokenType.SEMICOLON, "Expect ';' after reassignment.");
-        return new Stmt.Reassign(var_name, reIntializer);
+        Expr condition = null;
+        if(!check(TokenType.SEMICOLON)) {
+            condition = expression();
+        }
+        consume(TokenType.SEMICOLON, "Expect ';' after loop condition.");
+        Stmt increment = null;
+        if(!check(TokenType.RIGHT_PAREN)) {
+            advance();
+            increment = reassignmentDeclaration();
+        }
+        consume(TokenType.RIGHT_PAREN, "Expect ')' after for loop statement.");
+        consume(TokenType.LEFT_BRACE, "Expect '{' after fot loop statement.");
+        List<Stmt> statements = block();
+        if(increment != null) {
+            statements.addFirst(increment);
+        }
+        if(condition == null) {
+            condition = new Expr.Literal(true);
+        }
+        return new Stmt.While(condition, statements, initializer);
+    }
+
+    private Stmt whileStatement() {
+        consume(TokenType.LEFT_PAREN, "Expect '(' after while statement.");
+        Expr condition = expression();
+        consume(TokenType.RIGHT_PAREN, "Expect ')' after while statement.");
+        consume(TokenType.LEFT_BRACE, "Expect '{' after start of while block.");
+        List<Stmt> bodyStmts = block();
+        return new Stmt.While(condition, bodyStmts, null);
     }
 
     private List<Stmt> block() {

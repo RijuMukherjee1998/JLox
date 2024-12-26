@@ -14,6 +14,7 @@ import java.util.List;
 abstract class Stmt {
  interface Visitor<R> {
     R visitIfStmt(If stmt);
+    R visitWhileStmt(While stmt);
     R visitBlockStmt(Block stmt);
     R visitExpressionStmt(Expression stmt);
     R visitPrintStmt(Print stmt);
@@ -35,6 +36,22 @@ static class If extends Stmt {
   final Expr condition;
   final List<Stmt> thenBranches;
   final List<Stmt> elseBranches;
+}
+static class While extends Stmt {
+  While(Expr condition, List<Stmt> body, Stmt initStmt) {
+    this.condition = condition;
+    this.body = body;
+    this.initStmt = initStmt;
+  }
+
+ @Override
+ <R> R accept(Visitor<R> visitor) {
+    return visitor.visitWhileStmt(this);
+  }
+
+  final Expr condition;
+  final List<Stmt> body;
+  final Stmt initStmt;
 }
 static class Block extends Stmt {
   Block(List<Stmt> statements) {
