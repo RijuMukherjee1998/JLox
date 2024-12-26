@@ -18,11 +18,13 @@ public class GenerateAst {
                 "Binary : Expr left, Token operator, Expr right",
                 "Grouping : Expr expression",
                 "Literal : Object value",
+                "Logical : Expr left, Token operator, Expr right",
                 "Unary : Token operator, Expr right",
                 "Variable : Token name"
         ));
 
         defineAst(outputDir, "Stmt", Arrays.asList(
+                "If : Expr condition, List<Stmt> thenBranches, List<Stmt> elseBranches",
                 "Block : List<Stmt> statements",
                 "Expression : Expr expression",
                 "Print  : Expr expression",
@@ -35,6 +37,16 @@ public class GenerateAst {
         PrintWriter writer = new PrintWriter(path, StandardCharsets.UTF_8);
         writer.println("package com.lox;");
         writer.println();
+        writer.println("""
+                /*
+                    This is an auto generated class from the class tool/GenerateAst.
+                    This auto generator class implements the visitor pattern as this helps
+                    each of the class to have different visitor methods without changing the
+                    actual implementation of the classes itself.
+                    Any calling class should only implement the Visitor Interface and define how the
+                    visitor interface is going to work for them.
+                */
+                """);
         writer.println("abstract class " + baseName + " { ");
         defineVisitor(writer, baseName, types);
         //All the AST Sub Classes

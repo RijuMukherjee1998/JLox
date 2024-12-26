@@ -1,0 +1,31 @@
+/*
+    Testing conditional flow statement blocks
+*/
+
+var myAge = 35;
+if(myAge >= 30)
+{
+    print "I'm too old for this";
+    myAge = myAge + 10;
+}
+else
+{
+    print "I'm quite young:)";
+    myAge = myAge/2;
+}
+print "Agy agy :: " + myAge;
+
+myAge = 35;
+/*
+    Another program to test logical and and logical or
+*/
+
+var out_or = (25 > myAge) or (100 > 50);
+var out_and = (25 > myAge) and (100 > 50);
+print out_or;
+print out_and;
+
+print "hi" or 2;
+print nil or true;
+print nil and 2;
+print nil or "hi";

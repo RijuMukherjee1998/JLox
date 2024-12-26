@@ -14,14 +14,18 @@ import java.util.List;
      program    → declaration* EOF ;
      declaration → varDecl | reassignmentDecl | statement;
      varDecl    → "var" IDENTIFIER ( "=" expression) ? ";" ;
-     statement  → exprStmt | printStmt | block;
-     block      → "{" declaration* "}";
+     statement  → exprStmt | printStmt | blockStmt | ifStmt;
+     ifStmt     → "if" "(" expression ")" statement
+                    ( "else" statement)? ;
+     blockStmt  → "{" declaration* "}";
      exprStmt   → expression ";" ;
      printStmt  → "print" expression ";" ;\
 
     //expression syntax tree
      expression →  assignment ;
-     assignment → IDENTIFIER "=" assignment | equality ;
+     assignment → IDENTIFIER "=" assignment | logic_or ;
+     logic_or   → logic_and ( "or" logic_and)* ;
+     logic_and  → equality ( "and" equality )* ;
      equality   → comparison ( ( "!=" | "==" ) comparison )* ;
      comparison → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
      term       → factor ( ( "-" | "+" ) factor )* ;
@@ -71,9 +75,24 @@ public class Parser {
     }
 
     private Stmt statement() {
+        if(match(TokenType.IF)) return ifStatement();
         if(match(TokenType.PRINT)) return printStatement();
         if(match(TokenType.LEFT_BRACE)) return new Stmt.Block(block());
         return expressionStatement();
+    }
+
+    private Stmt ifStatement() {
+        consume(TokenType.LEFT_PAREN, "Expect '(' after if statement.");
+        Expr condition = expression();
+        consume(TokenType.RIGHT_PAREN, "Expect ')' after if statement.");
+        consume(TokenType.LEFT_BRACE, "Expect '{' after if start of if block.");
+        List<Stmt> thenBranchStmts = block();
+        List<Stmt> elseBranchStmts = null;
+        if(match(TokenType.ELSE)) {
+            consume(TokenType.LEFT_BRACE, "Expect '{' after start of else block.");
+            elseBranchStmts = block();
+        }
+        return new Stmt.If(condition, thenBranchStmts, elseBranchStmts);
     }
 
     private Stmt reassignmentDeclaration() {
@@ -115,7 +134,7 @@ public class Parser {
 
     private Expr assignment()
     {
-        Expr expr = equality();
+        Expr expr = or();
 
         if(match(TokenType.EQUAL)) {
             Token equals = previous();
@@ -126,6 +145,26 @@ public class Parser {
                 return new Expr.Assign(name, expr);
             }
             error(equals, "Invalid assignment target.");
+        }
+        return expr;
+    }
+
+    private Expr or() {
+        Expr expr = and();
+        if(match(TokenType.OR)) {
+            Token operator = previous();
+            Expr right = and();
+            expr = new Expr.Logical(expr, operator, right);
+        }
+        return expr;
+    }
+
+    private Expr and() {
+        Expr expr = equality();
+        if(match(TokenType.AND)) {
+            Token operator = previous();
+            Expr right = equality();
+            expr = new Expr.Logical(expr, operator, right);
         }
         return expr;
     }

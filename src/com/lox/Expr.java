@@ -1,11 +1,21 @@
 package com.lox;
 
+/*
+    This is an auto generated class from the class tool/GenerateAst.
+    This auto generator class implements the visitor pattern as this helps
+    each of the class to have different visitor methods without changing the
+    actual implementation of the classes itself.
+    Any calling class should only implement the Visitor Interface and define how the
+    visitor interface is going to work for them.
+*/
+
 abstract class Expr { 
  interface Visitor<R> {
     R visitAssignExpr(Assign expr);
     R visitBinaryExpr(Binary expr);
     R visitGroupingExpr(Grouping expr);
     R visitLiteralExpr(Literal expr);
+    R visitLogicalExpr(Logical expr);
     R visitUnaryExpr(Unary expr);
     R visitVariableExpr(Variable expr);
  }
@@ -62,6 +72,22 @@ static class Literal extends Expr {
   }
 
   final Object value;
+}
+static class Logical extends Expr {
+  Logical(Expr left, Token operator, Expr right) {
+    this.left = left;
+    this.operator = operator;
+    this.right = right;
+  }
+
+ @Override
+ <R> R accept(Visitor<R> visitor) {
+    return visitor.visitLogicalExpr(this);
+  }
+
+  final Expr left;
+  final Token operator;
+  final Expr right;
 }
 static class Unary extends Expr {
   Unary(Token operator, Expr right) {

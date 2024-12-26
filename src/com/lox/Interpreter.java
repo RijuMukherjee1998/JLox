@@ -28,6 +28,17 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         }
         return obj.toString();
     }
+
+    @Override
+    public Void visitIfStmt(Stmt.If stmt) {
+        if(isTruthy(evaluate(stmt.condition))) {
+            executeBlock(stmt.thenBranches, new Environment(environment));
+        } else if (stmt.elseBranches != null) {
+            executeBlock(stmt.elseBranches, new Environment(environment));
+        }
+        return null;
+    }
+
     @Override
     public Void visitBlockStmt(Stmt.Block stmt) {
         executeBlock(stmt.statements, new Environment((environment)));
@@ -85,6 +96,18 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Object visitLiteralExpr(Expr.Literal expr) {
         return expr.value;
+    }
+
+    @Override
+    public Object visitLogicalExpr(Expr.Logical expr) {
+        Object left = evaluate(expr.left);
+        if(expr.operator.type == TokenType.OR) {
+            if (isTruthy(left)) return left;
+        }
+        else {
+            if(!isTruthy(left)) return left;
+        }
+        return evaluate(expr.right);
     }
 
     @Override
