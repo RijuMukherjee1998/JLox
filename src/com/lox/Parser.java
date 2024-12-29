@@ -14,17 +14,21 @@ import java.util.List;
     Parser expression grammar for jlox
     //statement syntax tree
      program     → declaration* EOF ;
-     declaration → varDecl | varReassign | statement;
+     declaration → funDecl | varDecl | varReassign | statement;
+     funDecl     → "fun" function ;
+     function    → IDENTIFIER "(" parameters ? ")" block ;
+     parameters  → IDENTIFIER ( "," IDENTIFIER )*
      varDecl     → "var" IDENTIFIER ( "=" expression) ? ";" ;
      varReassign → IDENTIFIER ( "=" expression);
-     statement   → exprStmt | ifStmt | whileStmt | forStmt |  printStmt | blockStmt ;
+     statement   → exprStmt | ifStmt | whileStmt | forStmt |  printStmt | blockStmt | returnStmt ;
      ifStmt      → "if" "(" expression ")" statements
                     ( "else" statements)? ;
      whileStmt   → "while" "(" expression ")" statement;
      forStmt     → "for" "(" (varDecl | exprStmt | ;) expression? ";" expression?")" statements;
      blockStmt   → "{" declaration* "}";
      exprStmt    → expression ";" ;
-     printStmt   → "print" expression ";" ;\
+     printStmt   → "print" expression ";" ;
+     returnStmt  → "return" expression ? ";" ;
 
     //expression syntax tree
      expression →  assignment ;
@@ -35,7 +39,9 @@ import java.util.List;
      comparison → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
      term       → factor ( ( "-" | "+" ) factor )* ;
      factor     → unary ( ( "/" | "*" ) unary )* ;
-     unary      → ( "!" | "-" ) unary | primary ;
+     unary      → ( "!" | "-" ) unary | call ;
+     call       → primary ("(" arguments ?")")* ;
+     arguments  → expression ( "," expression )* ;
      primary    → NUMBER | STRING | "true" | "false" | "nil"
                    |"(" expression ")" | IDENTIFIER ;
 */
@@ -60,13 +66,38 @@ public class Parser {
 
     private Stmt declarations() {
         try{
+            if(match(TokenType.FUN)) return funcDeclaration("function");
             if(match(TokenType.VAR)) return varDeclaration();
-            if(match(TokenType.IDENTIFIER)) return reassignmentDeclaration();
+            if(match(TokenType.IDENTIFIER)){
+                if(check(TokenType.EQUAL)) {
+                    return reassignmentDeclaration();
+                }
+                else {
+                    --current;
+                }
+            }
             return statement();
         } catch (ParseError err){
             synchronize();
             return null;
         }
+    }
+
+    private Stmt funcDeclaration(String kind) {
+        Token name = consume(TokenType.IDENTIFIER, "Expect" + kind + "name");
+        consume(TokenType.LEFT_PAREN, "Expect '(' in the start of new function definition");
+        List<Token> params = new ArrayList<>();
+        if(!check(TokenType.RIGHT_PAREN)){
+            do{
+                if(params.size() > 255)
+                    error(peek(),"Cannot have more than 255 parameters");
+                params.add(consume(TokenType.IDENTIFIER,"Expect parameter name"));
+            } while (match(TokenType.COMMA));
+        }
+        consume(TokenType.RIGHT_PAREN, "Expect ')' in the end of function");
+        consume(TokenType.LEFT_BRACE, "Expect '{' in the start of function body");
+        List<Stmt> body = block();
+        return new Stmt.Function(name, params, body);
     }
 
     private Stmt varDeclaration() {
@@ -94,8 +125,19 @@ public class Parser {
         if(match(TokenType.FOR)) return forStatement();
         if(match(TokenType.WHILE)) return whileStatement();
         if(match(TokenType.PRINT)) return printStatement();
+        if(match(TokenType.RETURN)) return returnStatement();
         if(match(TokenType.LEFT_BRACE)) return new Stmt.Block(block());
         return expressionStatement();
+    }
+
+    private Stmt returnStatement() {
+        Token keyword = previous();
+        Expr value = null;
+        if(!check(TokenType.SEMICOLON)){
+            value = expression();
+        }
+        consume(TokenType.SEMICOLON, "Expect ';' after return statement.");
+        return new Stmt.Return(keyword, value);
     }
 
     private Stmt ifStatement() {
@@ -272,7 +314,34 @@ public class Parser {
             Expr right = unary();
             return new Expr.Unary(operator, right);
         }
-        return primary();
+        return call();
+    }
+
+    private Expr call() {
+        Expr expr = primary();
+        while (true){
+            if(match(TokenType.LEFT_PAREN)){
+                expr = finishCall(expr);
+            }
+            else {
+                break;
+            }
+        }
+        return expr;
+    }
+
+    private Expr finishCall(Expr expr) {
+        List<Expr> arguments = new ArrayList<>();
+        if(!check(TokenType.RIGHT_PAREN)){
+            do{
+                if(arguments.size() > 255){
+                    error(peek(), "Can't have more than 255 arguments.");
+                }
+                arguments.add(expression());
+            } while(match(TokenType.COMMA));
+        }
+        Token paren = consume(TokenType.RIGHT_PAREN, "Expect ')' after finish call.");
+        return new Expr.Call(expr, paren, arguments);
     }
 
     // primary ->  NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;

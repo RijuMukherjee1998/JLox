@@ -37,6 +37,12 @@ class AstPrinter implements Expr.Visitor<String> {
     public String visitBinaryExpr(Expr.Binary expr) {
         return parenthesize(expr.operator.lexeme, expr.left, expr.right);
     }
+
+    @Override
+    public String visitCallExpr(Expr.Call expr) {
+        return "";
+    }
+
     @Override
     public String visitVariableExpr(Expr.Variable expr) {
         return expr.name.lexeme;
